@@ -77,7 +77,33 @@ class SelectorBIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        best_BIC = math.inf
+        best_model = self.base_model(self.n_constant)
+
+        number_features = len(self.X[0])
+        # N is the number of data points
+        N = len(self.X)
+        log_N = math.log(N)
+
+        for n in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model = self.base_model(n)
+                # L is the likelihood of the fitted model
+                log_L = model.score(self.X, self.lengths)
+                # p is the number of parameters
+                p = (n ** 2) + (2 * number_features * n) - 1
+                # Calculate BIC for n
+                BIC = -2 * log_L + p * log_N
+
+                # The lower the BIC value the better the model
+                if (BIC < best_BIC):
+                    best_BIC = BIC
+                    best_model = model
+            except Exception as e:
+                print (e)
+                continue
+
+        return best_model
 
 
 class SelectorDIC(ModelSelector):
@@ -93,7 +119,34 @@ class SelectorDIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        best_DIC = -math.inf
+        best_model = self.base_model(self.n_constant)
+
+        for n in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                # Work out score for i
+                model = self.base_model(n)
+                log_L = model.score(self.X, self.lengths)
+
+                # Work out score for all but i
+                all_but_i = 0
+                for word, x in self.hwords.items():
+                    if word != self.this_word:
+                        all_but_i += model.score(x[0],x[1])
+
+                # Calculate DIC for n
+                DIC = log_L - (1/(len(self.hwords)-1)) * all_but_i
+
+                # The higher the DIC value the better the model
+                if DIC > best_DIC:
+                    best_DIC = DIC
+                    best_model = model
+                
+            except Exception as e:
+                print (e)
+                continue
+
+        return best_model
 
 
 class SelectorCV(ModelSelector):
@@ -105,4 +158,43 @@ class SelectorCV(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection using CV
-        raise NotImplementedError
+        best_CV = -math.inf
+        best_model = self.base_model(self.n_constant)
+
+        for n in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model = self.base_model(n)
+                
+                n_splits=3
+                word_sequences = self.sequences
+                
+                if len(word_sequences) < n_splits:
+                    break
+
+                split_method = KFold(n_splits=n_splits)
+
+                sum_scores = 0
+                number_scores = 0
+
+                for cv_train_idx, cv_test_idx in split_method.split(word_sequences):
+                    X_train, lengths_train = combine_sequences(cv_train_idx, word_sequences)
+                    X_test, lengths_test = combine_sequences(cv_test_idx, word_sequences)
+
+                    # Fit model with training set
+                    model.fit(X_train, lengths_train)
+                    # Score model with test set
+                    sum_scores += model.score(X_test, lengths_test)
+                    number_scores += 1
+                # Calculate average of all the scores for n
+                score = sum_scores / number_scores
+
+                # The higher the CV value the better the model
+                if score > best_CV:
+                    best_CV = score
+                    best_model = model
+
+            except Exception as e:
+                print (e)
+                continue
+
+        return best_model
