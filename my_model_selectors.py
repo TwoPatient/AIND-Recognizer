@@ -100,7 +100,6 @@ class SelectorBIC(ModelSelector):
                     best_BIC = BIC
                     best_model = model
             except Exception as e:
-                print (e)
                 continue
 
         return best_model
@@ -143,7 +142,6 @@ class SelectorDIC(ModelSelector):
                     best_model = model
                 
             except Exception as e:
-                print (e)
                 continue
 
         return best_model
@@ -194,7 +192,6 @@ class SelectorCV(ModelSelector):
                     best_model = model
 
             except Exception as e:
-                print (e)
                 continue
 
         return best_model

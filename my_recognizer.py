@@ -32,7 +32,7 @@ def recognize(models: dict, test_set: SinglesData):
                 probability[word] = model.score(x, length)
             except Exception as e:
                 probability[word] = -math.inf
-
+            # If probability is highest that becomes guess
             if probability[word] > highest_probability:
                 highest_probability = probability[word]
                 guess = word
